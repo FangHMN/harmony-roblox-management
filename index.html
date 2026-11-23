@@ -195,8 +195,22 @@ document.getElementById('add-package-button').addEventListener('click', () => {
   newRow.querySelector('.package-select').value = '';
   newRow.querySelector('.package-quantity').value = 1;
 
-  list.appendChild(newRow);
+  
+list.appendChild(newRow);
+
+const removeButton = document.createElement('button');
+removeButton.type = 'button';
+removeButton.textContent = '❌ ลบแพ็ก';
+removeButton.style.marginTop = '8px';
+
+removeButton.addEventListener('click', () => {
+  newRow.remove();
   updatePackageTotal();
+});
+
+newRow.appendChild(removeButton);
+updatePackageTotal();
+
 });
 
 document.getElementById('package-list').addEventListener('change', updatePackageTotal);
