@@ -19,6 +19,26 @@
   </form>
   <div id="message" class="msg" role="status" aria-live="polite"></div>
   <div class="small">สำหรับบัญชีที่ได้รับอนุญาตจากร้านเท่านั้น</div>
+
+<section id="dashboard" hidden>
+  <h2>Harmony TopUp Dashboard</h2>
+  <p id="dashboard-role"></p>
+
+  <nav aria-label="เมนูจัดการร้าน">
+    <button type="button" id="menu-sales">บันทึกการขาย</button>
+
+    <div id="owner-menu" hidden>
+      <button type="button">บัญชี Microsoft</button>
+      <button type="button">บัญชี Roblox</button>
+      <button type="button">จัดการสต็อก</button>
+      <button type="button">รายงานยอดขายและกำไร</button>
+      <button type="button">จัดการพนักงาน</button>
+    </div>
+  </nav>
+
+  <p>ยินดีต้อนรับเข้าสู่ระบบจัดการร้าน Harmony TopUp</p>
+  <button type="button" id="logout-button">ออกจากระบบ</button>
+</section>
 </main>
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -45,6 +65,13 @@
       }
       // Placeholder for later protected pages. Do not treat client-side role checks as security.
       document.getElementById('login-form').hidden=true;
+document.getElementById('dashboard').hidden = false;
+document.getElementById('dashboard-role').textContent =
+  `สิทธิ์ผู้ใช้งาน: ${data.role}`;
+
+document.getElementById('owner-menu').hidden =
+  data.role !== 'owner';
+
       show(`เข้าสู่ระบบสำเร็จ (${data.role}) — พร้อมเชื่อม Dashboard ในขั้นตอนถัดไป`,true);
     }
     const { data: { session } } = await supabase.auth.getSession();
@@ -63,6 +90,22 @@
       } catch(err) { show(err.message === 'Invalid login credentials' ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบข้อมูลและลองใหม่'); }
       finally { button.disabled=false; }
     });
+    
+document.getElementById('logout-button').addEventListener('click', async () => {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    show('ออกจากระบบไม่สำเร็จ กรุณาลองใหม่');
+    return;
+  }
+
+  document.getElementById('dashboard').hidden = true;
+  document.getElementById('owner-menu').hidden = true;
+  document.getElementById('login-form').hidden = false;
+  document.getElementById('password').value = '';
+  show('ออกจากระบบเรียบร้อยแล้ว', true);
+});
+
   }
 </script>
 </body>
