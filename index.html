@@ -101,6 +101,44 @@
     button.disabled = true;
   } else {
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    
+async function loadMicrosoftOptions() {
+  const accountSelect = document.getElementById('microsoft-account');
+  const packageSelect = document.getElementById('microsoft-package');
+
+  accountSelect.innerHTML = '<option value="">-- เลือกบัญชี Microsoft --</option>';
+  packageSelect.innerHTML = '<option value="">-- เลือกแพ็ก Robux --</option>';
+
+  const { data: accounts, error: accountError } =
+    await supabase.rpc('get_staff_microsoft_accounts');
+
+  if (accountError) throw accountError;
+
+  for (const account of accounts || []) {
+    const option = document.createElement('option');
+    option.value = account.id;
+    option.textContent = account.account_name;
+    accountSelect.appendChild(option);
+  }
+
+  const { data: packages, error: packageError } =
+    await supabase
+      .from('microsoft_packages')
+      .select('id,robux_amount,currency,package_price')
+      .eq('active', true)
+      .order('robux_amount');
+
+  if (packageError) throw packageError;
+
+  for (const pack of packages || []) {
+    const option = document.createElement('option');
+    option.value = pack.id;
+    option.textContent =
+      `${pack.robux_amount} Robux (${pack.package_price} ${pack.currency})`;
+    packageSelect.appendChild(option);
+  }
+}
+
     async function checkRole(user) {
       const { data, error } = await supabase.from('staff_profiles')
         .select('role,active').eq('user_id', user.id).maybeSingle();
@@ -120,6 +158,12 @@ document.getElementById('owner-menu').hidden =
   data.role !== 'owner';
 
       show(`เข้าสู่ระบบสำเร็จ (${data.role}) — พร้อมเชื่อม Dashboard ในขั้นตอนถัดไป`,true);
+      try {
+  await loadMicrosoftOptions();
+} catch (err) {
+  console.error('โหลดข้อมูล Microsoft ไม่สำเร็จ:', err);
+  show('เข้าสู่ระบบสำเร็จ แต่โหลดบัญชี Microsoft หรือแพ็ก Robux ไม่สำเร็จ');
+}
     }
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
