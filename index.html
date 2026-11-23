@@ -142,7 +142,10 @@ document.getElementById('logout-button').addEventListener('click', async () => {
   document.getElementById('password').value = '';
   show('ออกจากระบบเรียบร้อยแล้ว', true);
 });
-
+document.getElementById('menu-sales').addEventListener('click', () => {
+  document.getElementById('sales-page').hidden = false;
+  document.getElementById('menu-sales').hidden = true;
+});
   }
 </script>
 </body>
