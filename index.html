@@ -46,7 +46,15 @@
     .welcome-card { padding:22px 24px; background:linear-gradient(105deg,#eaf6fd,#fff2f6); border:1px solid #e4edf3; border-radius:19px; margin-bottom:20px; }
     .welcome-card strong { display:block; color:#40566a; margin-bottom:5px; font-size:17px; }
     .welcome-card p { margin:0; font-size:13px; }
-    #sales-page { background:#fff; border:1px solid #e6edf3; border-radius:19px; padding:25px; box-shadow:0 5px 22px rgba(78,115,142,.04); }
+    #sales-page, #microsoft-page { background:#fff; border:1px solid #e6edf3; border-radius:19px; padding:25px; box-shadow:0 5px 22px rgba(78,115,142,.04); }
+    .account-table-wrap { overflow-x:auto; margin-top:20px; }
+    .account-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .account-table th,.account-table td { padding:12px 10px; border-bottom:1px solid #eaf0f4; text-align:left; vertical-align:middle; }
+    .account-table th { color:#7891a4; font-weight:700; background:#f7fbfe; }
+    .account-table td { overflow-wrap:anywhere; }
+    .account-tag { display:inline-block; padding:4px 9px; border-radius:99px; background:#eaf6fd; color:#477e9c; }
+    .account-tag.inactive { background:#fff0f4; color:#9b5971; }
+    .owner-note { font-size:12px; color:#71869a; margin-top:12px; }
     .section-heading { font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:#8da4b7; font-weight:750; margin:23px 0 10px; padding-bottom:9px; border-bottom:1px solid #eaf0f4; }
     .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 16px; }
     .field { min-width:0; }
@@ -97,6 +105,27 @@
   </nav>
 
   <div class="workspace"><div class="welcome-card"><strong>ยินดีต้อนรับสู่ Harmony TopUp ♡</strong><p>จัดการรายการขาย Roblox ได้อย่างเป็นระเบียบในพื้นที่เดียว</p></div>
+  <section id="microsoft-page" hidden>
+    <h3>จัดการบัญชี Microsoft</h3>
+    <p>เพิ่มบัญชี Microsoft สำหรับเติม Roblox (USD) · เฉพาะ Owner</p>
+    <form id="microsoft-account-form">
+      <div class="section-heading">เพิ่มบัญชีใหม่</div>
+      <div class="form-grid">
+        <div class="field"><label for="ms-account-name">อีเมล Microsoft</label><input id="ms-account-name" type="email" autocomplete="off" maxlength="254" placeholder="example@outlook.com" required></div>
+        <div class="field"><label for="ms-display-name">ชื่อแสดงผล (ไม่บังคับ)</label><input id="ms-display-name" type="text" maxlength="120" placeholder="Microsoft 01"></div>
+        <div class="field"><label for="ms-region">ภูมิภาค</label><select id="ms-region"><option value="US">US — United States</option></select></div>
+        <div class="field"><label for="ms-purchase-date">วันที่ซื้อบัญชี (ไม่บังคับ)</label><input id="ms-purchase-date" type="date"></div>
+      </div>
+      <label for="ms-notes">หมายเหตุ (ไม่บังคับ)</label><textarea id="ms-notes" rows="2"></textarea>
+      <button id="ms-create-button" type="submit">+ เพิ่มบัญชี Microsoft</button>
+      <div id="ms-form-message" class="msg" role="status" aria-live="polite"></div>
+    </form>
+    <div class="section-heading">บัญชี Microsoft ทั้งหมด</div>
+    <button type="button" id="ms-refresh-button" style="background:#e5f2fb;color:#447c9c">รีเฟรชข้อมูล</button>
+    <div id="ms-list-message" class="owner-note" role="status"></div>
+    <div class="account-table-wrap"><table class="account-table"><thead><tr><th>อีเมล</th><th>ชื่อแสดงผล</th><th>ภูมิภาค</th><th>สถานะ</th><th>เครดิตคงเหลือ</th></tr></thead><tbody id="ms-accounts-body"></tbody></table></div>
+    <p class="owner-note">บัญชีที่เพิ่มใหม่เริ่มต้นที่ 0 USD · การเติมเครดิตและแก้ไขบัญชีจะเพิ่มในขั้นตอนถัดไป</p>
+  </section>
   <section id="sales-page" hidden>
   <h3>บันทึกการขาย Roblox</h3>
 
@@ -204,8 +233,8 @@ async function loadMicrosoftOptions() {
 
   for (const account of accounts || []) {
     const option = document.createElement('option');
-    option.value = account.id;
-    option.textContent = account.account_name;
+    option.value = account.account_id;
+    option.textContent = account.display_name || `Microsoft ${String(account.account_id).slice(0, 8)}`;
     accountSelect.appendChild(option);
   }
 
@@ -282,6 +311,91 @@ updatePackageTotal();
 
 document.getElementById('package-list').addEventListener('change', updatePackageTotal);
 document.getElementById('package-list').addEventListener('input', updatePackageTotal);
+    let currentRole = null;
+    const microsoftPage = document.getElementById('microsoft-page');
+    const salesPage = document.getElementById('sales-page');
+    const msFormMessage = document.getElementById('ms-form-message');
+    const msListMessage = document.getElementById('ms-list-message');
+    function showMsMessage(text, ok=false) {
+      msFormMessage.textContent = text;
+      msFormMessage.className = 'msg' + (ok ? ' ok' : '');
+    }
+    async function loadOwnerMicrosoftAccounts() {
+      if (currentRole !== 'owner') return;
+      msListMessage.textContent = 'กำลังโหลดบัญชี...';
+      const { data: accounts, error: accountError } = await supabase
+        .from('accounts')
+        .select('id,account_name,display_name,region,status')
+        .eq('account_type','Microsoft')
+        .order('created_at', { ascending:false });
+      if (accountError) throw accountError;
+      const { data: balances, error: balanceError } = await supabase
+        .from('microsoft_credit_balances')
+        .select('account_id,currency,balance');
+      if (balanceError) throw balanceError;
+      const byId = new Map((balances || []).map(item => [item.account_id,item]));
+      const tbody = document.getElementById('ms-accounts-body');
+      tbody.replaceChildren();
+      for (const account of accounts || []) {
+        const row = document.createElement('tr');
+        const balance = byId.get(account.id);
+        const values = [account.account_name,account.display_name || '—',account.region || '—',account.status,
+          balance ? `${Number(balance.balance).toLocaleString('en-US',{maximumFractionDigits:4})} ${balance.currency}` : 'ยังไม่มีข้อมูลเครดิต'];
+        values.forEach((value,i) => {
+          const cell = document.createElement('td');
+          if (i === 3) {
+            const tag = document.createElement('span');
+            tag.className = 'account-tag' + (value === 'inactive' ? ' inactive' : '');
+            tag.textContent = value;
+            cell.appendChild(tag);
+          } else cell.textContent = value;
+          row.appendChild(cell);
+        });
+        tbody.appendChild(row);
+      }
+      msListMessage.textContent = `${(accounts || []).length} บัญชี`;
+    }
+    document.getElementById('menu-microsoft').addEventListener('click', async () => {
+      if (currentRole !== 'owner') return;
+      salesPage.hidden = true;
+      microsoftPage.hidden = false;
+      microsoftPage.scrollIntoView({behavior:'smooth',block:'start'});
+      try { await loadOwnerMicrosoftAccounts(); }
+      catch (err) { console.error(err); msListMessage.textContent = 'โหลดข้อมูลบัญชีไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ใน Supabase'; }
+    });
+    document.getElementById('ms-refresh-button').addEventListener('click', async () => {
+      try { await loadOwnerMicrosoftAccounts(); }
+      catch (err) { console.error(err); msListMessage.textContent = 'โหลดข้อมูลบัญชีไม่สำเร็จ'; }
+    });
+    document.getElementById('microsoft-account-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (currentRole !== 'owner') return;
+      const createButton = document.getElementById('ms-create-button');
+      createButton.disabled = true;
+      showMsMessage('กำลังเพิ่มบัญชี...');
+      try {
+        const email = document.getElementById('ms-account-name').value.trim();
+        const displayName = document.getElementById('ms-display-name').value.trim();
+        const region = document.getElementById('ms-region').value;
+        const purchaseDate = document.getElementById('ms-purchase-date').value;
+        const notes = document.getElementById('ms-notes').value.trim();
+        const { error } = await supabase.rpc('owner_create_microsoft_account', {
+          p_account_name: email,
+          p_display_name: displayName || null,
+          p_region: region,
+          p_purchase_date: purchaseDate || null,
+          p_notes: notes || null
+        });
+        if (error) throw error;
+        document.getElementById('microsoft-account-form').reset();
+        showMsMessage('เพิ่มบัญชี Microsoft สำเร็จ',true);
+        await loadOwnerMicrosoftAccounts();
+        await loadMicrosoftOptions();
+      } catch (err) {
+        console.error(err);
+        showMsMessage(err.code === '23505' ? 'อีเมลนี้มีอยู่ในบัญชี Microsoft แล้ว' : `เพิ่มบัญชีไม่สำเร็จ: ${err.message || 'กรุณาลองใหม่'}`);
+      } finally { createButton.disabled = false; }
+    });
     async function checkRole(user) {
       const { data, error } = await supabase.from('staff_profiles')
         .select('role,active').eq('user_id', user.id).maybeSingle();
@@ -291,7 +405,8 @@ document.getElementById('package-list').addEventListener('input', updatePackageT
         show('บัญชีนี้ไม่ได้รับอนุญาตให้ใช้งานระบบ');
         return;
       }
-      // Placeholder for later protected pages. Do not treat client-side role checks as security.
+      // Database RLS and RPC permission checks enforce authorization server-side.
+      currentRole = data.role;
       document.getElementById('login-form').hidden=true;
 document.getElementById('dashboard').hidden = false;
 document.getElementById('dashboard-role').textContent =
@@ -335,12 +450,15 @@ document.getElementById('logout-button').addEventListener('click', async () => {
 
   document.getElementById('dashboard').hidden = true;
   document.getElementById('owner-menu').hidden = true;
+  currentRole = null;
+  microsoftPage.hidden = true;
+  salesPage.hidden = true;
   document.getElementById('login-form').hidden = false;
   document.getElementById('password').value = '';
   show('ออกจากระบบเรียบร้อยแล้ว', true);
 });
 document.getElementById('menu-sales').addEventListener('click', () => {
-  const salesPage = document.getElementById('sales-page');
+  microsoftPage.hidden = true;
   salesPage.hidden = false;
   salesPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
