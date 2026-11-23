@@ -9,9 +9,13 @@
     :root { font-family: system-ui,-apple-system,"Segoe UI",sans-serif; color:#40566a; background:#f8fcff; font-synthesis:none; }
     * { box-sizing:border-box; }
     [hidden] { display:none !important; }
-    body { margin:0; min-height:100vh; padding:32px 18px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 7% 8%,#f8dce5 0,transparent 32%),radial-gradient(circle at 94% 92%,#d9edfa 0,transparent 37%),#f8fcff; }
+    body { margin:0; min-height:100vh; padding:16px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 7% 8%,#f8dce5 0,transparent 32%),radial-gradient(circle at 94% 92%,#d9edfa 0,transparent 37%),#f8fcff; }
     main { width:min(100%,460px); padding:38px; border:1px solid #e7edf2; border-radius:26px; background:#fff; box-shadow:0 22px 75px rgba(76,112,143,.10); transition:width .2s ease; }
-    main:has(#dashboard:not([hidden])) { width:min(100%,1100px); padding:32px; }
+    main:has(#dashboard:not([hidden])) {
+  width: 100%;
+  max-width: none;
+  padding: 32px;
+}
     h1,h2,h3 { color:#344b60; letter-spacing:-.035em; }
     h1 { font-size:30px; margin:0 0 8px; }
     h2 { font-size:26px; margin:0 0 6px; }
