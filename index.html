@@ -37,6 +37,43 @@
   </nav>
 
   <p>ยินดีต้อนรับเข้าสู่ระบบจัดการร้าน Harmony TopUp</p>
+  <section id="sales-page" hidden>
+  <h3>บันทึกการขาย Roblox</h3>
+
+  <form id="sales-form">
+    <label for="sale-date">วันที่ขาย</label>
+    <input id="sale-date" type="date" required>
+
+    <label for="customer-channel">ช่องทางลูกค้า</label>
+    <select id="customer-channel" required>
+      <option value="LINE">LINE</option>
+      <option value="Facebook">Facebook</option>
+    </select>
+
+    <label for="customer-name">ชื่อลูกค้า</label>
+    <input id="customer-name" type="text" required>
+
+    <label for="roblox-username">Roblox Username</label>
+    <input id="roblox-username" type="text">
+
+    <label for="sale-type">ประเภทการขาย</label>
+    <select id="sale-type" required>
+      <option value="topup">แบบเติม (Microsoft)</option>
+      <option value="send">แบบส่ง (Roblox)</option>
+    </select>
+
+    <label for="robux-amount">จำนวน Robux</label>
+    <input id="robux-amount" type="number" min="1" required>
+
+    <label for="sale-price">ราคาขาย (บาท)</label>
+    <input id="sale-price" type="number" min="0" step="0.01" required>
+
+    <label for="sale-notes">หมายเหตุ</label>
+    <textarea id="sale-notes" rows="3"></textarea>
+
+    <button type="submit" disabled>บันทึกการขาย (รอเชื่อมระบบ)</button>
+  </form>
+</section>
   <button type="button" id="logout-button">ออกจากระบบ</button>
 </section>
 </main>
