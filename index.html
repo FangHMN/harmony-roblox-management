@@ -67,10 +67,29 @@
     <option value="">-- เลือกบัญชี Microsoft --</option>
   </select>
 
-  <label for="microsoft-package">แพ็ก Robux</label>
-  <select id="microsoft-package">
-    <option value="">-- เลือกแพ็ก Robux --</option>
-  </select>
+ <label>แพ็ก Robux ที่เติม</label>
+
+<div id="package-list">
+  <div class="package-row">
+    <select class="package-select">
+      <option value="">-- เลือกแพ็ก Robux --</option>
+    </select>
+
+    <input
+      class="package-quantity"
+      type="number"
+      min="1"
+      value="1"
+      aria-label="จำนวนแพ็ก"
+    >
+  </div>
+</div>
+
+<button type="button" id="add-package-button">
+  + เพิ่มแพ็ก Robux
+</button>
+
+<p id="package-total">รวม 0 Robux</p>
 </div>
     <label for="robux-amount">จำนวน Robux</label>
     <input id="robux-amount" type="number" min="1" required>
@@ -104,10 +123,12 @@
     
 async function loadMicrosoftOptions() {
   const accountSelect = document.getElementById('microsoft-account');
-  const packageSelect = document.getElementById('microsoft-package');
+  const packageList = document.getElementById('package-list');
 
   accountSelect.innerHTML = '<option value="">-- เลือกบัญชี Microsoft --</option>';
-  packageSelect.innerHTML = '<option value="">-- เลือกแพ็ก Robux --</option>';
+  packageList.querySelectorAll('.package-select').forEach(select => {
+  select.innerHTML = '<option value="">-- เลือกแพ็ก Robux --</option>';
+});
 
   const { data: accounts, error: accountError } =
     await supabase.rpc('get_staff_microsoft_accounts');
@@ -130,15 +151,56 @@ async function loadMicrosoftOptions() {
 
   if (packageError) throw packageError;
 
-  for (const pack of packages || []) {
+  const packageOptions = packages || [];
+
+function fillPackageSelect(select) {
+  select.innerHTML = '<option value="">-- เลือกแพ็ก Robux --</option>';
+
+  for (const pack of packageOptions) {
     const option = document.createElement('option');
     option.value = pack.id;
+    option.dataset.robux = pack.robux_amount;
     option.textContent =
       `${pack.robux_amount} Robux (${pack.package_price} ${pack.currency})`;
-    packageSelect.appendChild(option);
+    select.appendChild(option);
   }
 }
 
+packageList.querySelectorAll('.package-select').forEach(fillPackageSelect);
+}
+function updatePackageTotal() {
+  let total = 0;
+
+  document.querySelectorAll('.package-row').forEach(row => {
+    const select = row.querySelector('.package-select');
+    const quantity = Number(row.querySelector('.package-quantity').value);
+
+    const option = select.selectedOptions[0];
+    const robux = Number(option?.dataset.robux || 0);
+
+    total += robux * quantity;
+  });
+
+  document.getElementById('package-total').textContent =
+    `รวม ${total.toLocaleString()} Robux`;
+
+  document.getElementById('robux-amount').value = total || '';
+}
+
+document.getElementById('add-package-button').addEventListener('click', () => {
+  const list = document.getElementById('package-list');
+  const firstRow = list.querySelector('.package-row');
+  const newRow = firstRow.cloneNode(true);
+
+  newRow.querySelector('.package-select').value = '';
+  newRow.querySelector('.package-quantity').value = 1;
+
+  list.appendChild(newRow);
+  updatePackageTotal();
+});
+
+document.getElementById('package-list').addEventListener('change', updatePackageTotal);
+document.getElementById('package-list').addEventListener('input', updatePackageTotal);
     async function checkRole(user) {
       const { data, error } = await supabase.from('staff_profiles')
         .select('role,active').eq('user_id', user.id).maybeSingle();
